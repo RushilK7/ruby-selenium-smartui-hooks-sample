@@ -53,6 +53,26 @@ lt_options["smartUI.project"]  = ENV["SMARTUI_PROJECT"] || "ruby-smartui-hooks"
 lt_options["smartUI.build"]    = ENV["BUILD_NAME"] || "Ruby SmartUI Hooks Build"
 lt_options["smartUI.baseline"] = false
 
+# ---------------------------------------------------------------------------
+# GitHub / GitLab PR Checks Integration
+# ---------------------------------------------------------------------------
+# When GIT_URL is set, SmartUI posts a status check back to your PR/MR.
+#
+# GitHub format:
+#   https://api.github.com/repos/{owner}/{repo}/statuses/{commit_sha}
+#
+# GitLab format:
+#   https://gitlab.com/api/v4/projects/{project_id}/statuses/{commit_sha}
+#
+# The capability is named "github" (legacy name) but works for both
+# GitHub and GitLab. SmartUI will post build results (approved/changes
+# found/failed) as a commit status check on the PR/MR.
+# ---------------------------------------------------------------------------
+if ENV["GIT_URL"] && !ENV["GIT_URL"].empty?
+  lt_options[:github] = { url: ENV["GIT_URL"] }
+  puts "PR checks enabled: #{ENV["GIT_URL"]}"
+end
+
 options.add_option('LT:Options', lt_options)
 
 # ---------------------------------------------------------------------------
