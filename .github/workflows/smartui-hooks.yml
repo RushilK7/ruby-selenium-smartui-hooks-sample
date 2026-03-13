@@ -1,0 +1,36 @@
+name: SmartUI Hooks - Ruby Selenium
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  LT_USERNAME: ${{ secrets.LT_USERNAME }}
+  LT_ACCESS_KEY: ${{ secrets.LT_ACCESS_KEY }}
+
+jobs:
+  smartui-hooks-test:
+    name: SmartUI Visual Regression (Hooks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true  # caches installed gems automatically
+
+      - name: Install dependencies
+        run: gem install bundler && bundle install
+
+      - name: Run SmartUI Hooks Test
+        env:
+          BUILD_NAME: "smartui-hooks-${{ github.run_number }}-${{ github.sha }}"
+          SMARTUI_PROJECT: "ruby-smartui-hooks-project"
+        run: bundle exec ruby todo-click-test.rb
