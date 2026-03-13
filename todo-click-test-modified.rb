@@ -1,35 +1,29 @@
-# =============================================================================
-# SmartUI Hooks (WebHook) — Ruby Selenium Sample (MODIFIED VERSION)
-# =============================================================================
+# SmartUI Hooks — Ruby Selenium Modified Test
 #
-# This is a modified version of todo-click-test.rb that injects CSS and DOM
-# changes into the page before capturing screenshots. Use this to generate
-# visual diffs against the baseline captured by todo-click-test.rb.
+# Same test as todo-click-test.rb but injects a dark theme and layout changes
+# before capturing screenshots. Run this after approving a baseline to see
+# SmartUI detect visual diffs.
 #
-# What this modifies:
-#   - Injects a dark theme (background, text, containers)
-#   - Changes typography to monospace with uppercase headers
-#   - Reskins list items, buttons, and inputs
-#   - Adds a banner at the top and a footer at the bottom
-#
-# Run:
+# Usage:
+#   export LT_USERNAME='your-username'
+#   export LT_ACCESS_KEY='your-access-key'
 #   bundle exec ruby todo-click-test-modified.rb
-#
-# =============================================================================
 
 require 'rubygems'
 require 'selenium-webdriver'
 
-# ---------------------------------------------------------------------------
-# Configuration (same as baseline test)
-# ---------------------------------------------------------------------------
+# --- Credentials ---
 
 USERNAME   = ENV["LT_USERNAME"]  || "{username}"
 ACCESS_KEY = ENV["LT_ACCESS_KEY"] || "{accessToken}"
 
+# --- Browser capabilities ---
+
 options = Selenium::WebDriver::Options.chrome
 options.browser_version = "latest"
 options.platform_name   = "Windows 10"
+
+# --- LambdaTest capabilities ---
 
 lt_options = {
   username:    USERNAME,
@@ -41,13 +35,14 @@ lt_options = {
   plugin:      "ruby-ruby"
 }
 
-# SmartUI capabilities — same project as baseline so diffs are compared
+# --- SmartUI capabilities (same project as baseline for comparison) ---
+
 lt_options["smartUI.project"]  = ENV["SMARTUI_PROJECT"] || "ruby-smartui-hooks"
 lt_options["smartUI.build"]    = ENV["BUILD_NAME"] || "Ruby SmartUI Hooks Build - Modified"
 lt_options["smartUI.baseline"] = false
 
-# GitHub / GitLab PR Checks — posts SmartUI status to the PR/MR
-# See todo-click-test.rb for full documentation on this capability
+# --- PR status checks (GitHub / GitLab) ---
+
 if ENV["GIT_URL"] && !ENV["GIT_URL"].empty?
   lt_options[:github] = { url: ENV["GIT_URL"] }
   puts "PR checks enabled: #{ENV["GIT_URL"]}"
@@ -55,25 +50,16 @@ end
 
 options.add_option('LT:Options', lt_options)
 
-# ---------------------------------------------------------------------------
-# Connect to the LambdaTest Selenium grid
-# ---------------------------------------------------------------------------
+# --- Run test ---
 
 driver = Selenium::WebDriver.for(:remote,
   url:          "https://hub.lambdatest.com/wd/hub",
   capabilities: options)
 
 begin
-  # -------------------------------------------------------------------------
-  # Step 1: Open the sample todo app
-  # -------------------------------------------------------------------------
   driver.navigate.to "https://lambdatest.github.io/sample-todo-app/"
 
-  # -------------------------------------------------------------------------
-  # Step 2: Inject visual changes — dark theme, new layout, new typography
-  # -------------------------------------------------------------------------
-
-  # Inject CSS overrides
+  # Inject dark theme CSS
   driver.execute_script(<<~JS)
     var style = document.createElement('style');
     style.innerHTML = `
@@ -150,7 +136,7 @@ begin
     document.head.appendChild(style);
   JS
 
-  # Add a banner at the top of the page
+  # Add a banner at the top
   driver.execute_script(<<~JS)
     var banner = document.createElement('div');
     banner.style.cssText = 'background: linear-gradient(90deg, #e94560, #0f3460); color: white; text-align: center; padding: 15px; font-size: 14px; font-family: Courier New, monospace; letter-spacing: 2px;';
@@ -158,28 +144,23 @@ begin
     document.body.insertBefore(banner, document.body.firstChild);
   JS
 
-  # -------------------------------------------------------------------------
-  # Step 3: Capture screenshots (same names as baseline for comparison)
-  # -------------------------------------------------------------------------
-
-  # Capture the restyled initial page
+  # Screenshot: initial page (with dark theme applied)
   driver.execute_script("smartui.takeScreenshot=todo-app-initial")
 
-  # Click first two list items
+  # Click the first two list items
   driver.find_element(:name, 'li1').click
   driver.find_element(:name, 'li2').click
 
-  # Capture after clicking items
+  # Screenshot: after clicking items
   driver.execute_script("smartui.takeScreenshot=todo-app-items-clicked")
 
   # Add a new todo item
   driver.find_element(:id, 'sampletodotext').send_keys("Yey, Let's add it to list")
   driver.find_element(:id, 'addbutton').click
 
-  # Verify the new item was added
   entered_text = driver.find_element(:xpath, '/html/body/div/div/div/ul/li[6]/span').text
 
-  # Add a footer for extra layout changes
+  # Add a footer
   driver.execute_script(<<~JS)
     var footer = document.createElement('div');
     footer.style.cssText = 'background-color: #16213e; color: #e94560; text-align: center; padding: 20px; margin-top: 30px; border-top: 2px solid #e94560; font-family: Courier New, monospace;';
@@ -188,15 +169,13 @@ begin
     target.appendChild(footer);
   JS
 
-  # Capture after adding item + footer
+  # Screenshot: after adding item + footer
   driver.execute_script("smartui.takeScreenshot=todo-app-item-added")
 
-  # Full-page screenshot
+  # Screenshot: full page
   driver.execute_script("smartui.takeFullPageScreenshot=todo-app-full-page")
 
-  # -------------------------------------------------------------------------
-  # Step 4: Report test status
-  # -------------------------------------------------------------------------
+  # Report status
   status = (entered_text == "Yey, Let's add it to list") ? "passed" : "failed"
   driver.execute_script("lambda-status=#{status}")
 
