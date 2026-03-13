@@ -20,7 +20,7 @@ lt_options[:w3c] = true
 lt_options[:plugin] = "ruby-ruby"
 
 # SmartUI Webhook capabilities
-lt_options["smartUI.project"] = ENV["SMARTUI_PROJECT"] || "ruby-smartui-hooks-project"
+lt_options["smartUI.project"] = ENV["SMARTUI_PROJECT"] || "github_hooks"
 lt_options["smartUI.build"] = ENV["BUILD_NAME"] || "Ruby SmartUI Hooks Build"
 lt_options["smartUI.baseline"] = false
 
