@@ -46,6 +46,13 @@ lt_options["smartUI.project"]  = ENV["SMARTUI_PROJECT"] || "ruby-smartui-hooks"
 lt_options["smartUI.build"]    = ENV["BUILD_NAME"] || "Ruby SmartUI Hooks Build - Modified"
 lt_options["smartUI.baseline"] = false
 
+# GitHub / GitLab PR Checks — posts SmartUI status to the PR/MR
+# See todo-click-test.rb for full documentation on this capability
+if ENV["GIT_URL"] && !ENV["GIT_URL"].empty?
+  lt_options[:github] = { url: ENV["GIT_URL"] }
+  puts "PR checks enabled: #{ENV["GIT_URL"]}"
+end
+
 options.add_option('LT:Options', lt_options)
 
 # ---------------------------------------------------------------------------
