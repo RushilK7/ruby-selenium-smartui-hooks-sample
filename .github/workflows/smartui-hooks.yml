@@ -1,21 +1,48 @@
+# =============================================================================
+# SmartUI Visual Regression — Hooks (WebHook) Flow
+# =============================================================================
+#
+# This workflow runs Ruby Selenium tests on the LambdaTest cloud grid and
+# captures SmartUI screenshots using the Hooks (WebHook) approach.
+#
+# Triggers:
+#   - Pull requests targeting main  (visual regression check)
+#   - Manual dispatch               (on-demand testing)
+#
+# Required secrets:
+#   LT_USERNAME   — LambdaTest username
+#   LT_ACCESS_KEY — LambdaTest access key
+#
+# The test file can be swapped via the TEST_FILE environment variable:
+#   - todo-click-test.rb          (baseline — clean UI)
+#   - todo-click-test-modified.rb (modified — dark theme for visual diffs)
+#
+# =============================================================================
+
 name: SmartUI Hooks - Ruby Selenium
+
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      test_file:
+        description: 'Test file to run'
+        required: false
+        default: 'todo-click-test.rb'
+        type: choice
+        options:
+          - todo-click-test.rb
+          - todo-click-test-modified.rb
 
 env:
   LT_USERNAME: ${{ secrets.LT_USERNAME }}
   LT_ACCESS_KEY: ${{ secrets.LT_ACCESS_KEY }}
 
 jobs:
-  # Run visual regression tests on PRs and manual dispatch
   smartui-hooks-test:
     name: SmartUI Visual Regression (Hooks)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 30
 
     steps:
@@ -34,45 +61,8 @@ jobs:
       - name: Run SmartUI Hooks Test
         env:
           BUILD_NAME: "smartui-hooks-${{ github.run_number }}-${{ github.sha }}"
-          SMARTUI_PROJECT: "github_hooks"
-        run: bundle exec ruby todo-click-test.rb
-
-  # On merge to main: mark the PR build as baseline (no new test run)
-  approve-pr-baseline:
-    name: Approve PR Build as Baseline
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install SmartUI CLI
-        run: npm install @lambdatest/smartui-cli
-
-      - name: Get merged PR branch
-        id: pr-info
+          SMARTUI_PROJECT: "ruby-smartui-hooks"
         run: |
-          # Find the most recently merged PR targeting main
-          PR_JSON=$(gh pr list --state merged --base main --limit 1 --json headRefName,number)
-          BRANCH=$(echo "$PR_JSON" | jq -r '.[0].headRefName')
-          PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number')
-          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
-          echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
-          echo "Merging SmartUI build from PR #$PR_NUM (branch: $BRANCH) into main baseline"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Merge PR branch screenshots into main baseline
-        run: |
-          npx smartui merge branch \
-            --source "${{ steps.pr-info.outputs.branch }}" \
-            --target main
-        env:
-          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          TEST_FILE="${{ github.event.inputs.test_file || 'todo-click-test.rb' }}"
+          echo "Running: $TEST_FILE"
+          bundle exec ruby "$TEST_FILE"
