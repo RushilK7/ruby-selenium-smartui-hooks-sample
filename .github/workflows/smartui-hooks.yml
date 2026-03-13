@@ -11,9 +11,11 @@ env:
   LT_ACCESS_KEY: ${{ secrets.LT_ACCESS_KEY }}
 
 jobs:
+  # Run visual regression tests on PRs and manual dispatch
   smartui-hooks-test:
     name: SmartUI Visual Regression (Hooks)
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 30
 
     steps:
@@ -24,7 +26,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
-          bundler-cache: true  # caches installed gems automatically
+          bundler-cache: true
 
       - name: Install dependencies
         run: gem install bundler && bundle install
@@ -33,6 +35,44 @@ jobs:
         env:
           BUILD_NAME: "smartui-hooks-${{ github.run_number }}-${{ github.sha }}"
           SMARTUI_PROJECT: "github_hooks"
-          # Auto-approve baseline on merge to main; compare only on PRs
-          SMARTUI_BASELINE: ${{ github.event_name == 'push' && 'true' || 'false' }}
         run: bundle exec ruby todo-click-test.rb
+
+  # On merge to main: mark the PR build as baseline (no new test run)
+  approve-pr-baseline:
+    name: Approve PR Build as Baseline
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install SmartUI CLI
+        run: npm install @lambdatest/smartui-cli
+
+      - name: Get merged PR branch
+        id: pr-info
+        run: |
+          # Find the most recently merged PR targeting main
+          PR_JSON=$(gh pr list --state merged --base main --limit 1 --json headRefName,number)
+          BRANCH=$(echo "$PR_JSON" | jq -r '.[0].headRefName')
+          PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number')
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUM" >> $GITHUB_OUTPUT
+          echo "Merging SmartUI build from PR #$PR_NUM (branch: $BRANCH) into main baseline"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Merge PR branch screenshots into main baseline
+        run: |
+          npx smartui merge branch \
+            --source "${{ steps.pr-info.outputs.branch }}" \
+            --target main
+        env:
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
