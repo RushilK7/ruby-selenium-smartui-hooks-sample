@@ -32,5 +32,7 @@ jobs:
       - name: Run SmartUI Hooks Test
         env:
           BUILD_NAME: "smartui-hooks-${{ github.run_number }}-${{ github.sha }}"
-          SMARTUI_PROJECT: "ruby-smartui-hooks-project"
+          SMARTUI_PROJECT: "github_hooks"
+          # Auto-approve baseline on merge to main; compare only on PRs
+          SMARTUI_BASELINE: ${{ github.event_name == 'push' && 'true' || 'false' }}
         run: bundle exec ruby todo-click-test.rb
